@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Филворды | ВКонтакте</title>
+    <script src="https://unpkg.com/vk-miniapps-sdk@5/dist/js/sdk.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #5e81a8, #4a76a8);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            width: 100%;
+        }
+        
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 15px;
+            border-radius: 20px;
+            margin-bottom: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            border: 2px solid #fff;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        
+        #gridContainer {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 4px;
+            margin: 15px 0;
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .cell {
+            aspect-ratio: 1/1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 18px;
+            color: #2a5885;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .cell.selected {
+            background-color: #ffa000;
+            color: white;
+            transform: scale(1.05);
+        }
+        
+        .cell.found {
+            background-color: #4caf50;
+            color: white;
+        }
+        
+        .words-list {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 12px;
+            margin: 15px 0;
+            backdrop-filter: blur(10px);
+        }
+        
+        .words-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        
+        .word-item {
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .word-item.found {
+            background: rgba(76, 175, 80, 0.3);
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            width: 100%;
+        }
+        
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #4a76a8;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        button:hover {
+            background: #fff;
+            transform: translateY(-2px);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        #hintButton {
+            background: rgba(255, 168, 0, 0.9);
+            color: white;
+        }
+        
+        .message {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 20px;
+            border-radius: 20px;
+            background: #4caf50;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 1000;
+        }
+        
+        .message.show {
+            opacity: 1;
+        }
+        
+        @media (max-width: 500px) {
+            #gridContainer {
+                grid-template-columns: repeat(8, 1fr);
+                gap: 3px;
+            }
+            
+            .cell {
+                font-size: 16px;
+            }
+            
+            .words-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Филворд ВКонтакте</h1>
+            <div class="user-info">
+                <img id="userAvatar" class="user-avatar" src="https://via.placeholder.com/40" alt="Аватар">
+                <span id="userName">Игрок</span>
+            </div>
+        </header>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-value" id="foundCount">0</div>
+                <div class="stat-label">Найдено</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="totalWords">0</div>
+                <div class="stat-label">Всего слов</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="hintsCount">3</div>
+                <div class="stat-label">Подсказки</div>
+            </div>
+        </div>
+        
+        <div id="gridContainer"></div>
+        
+        <div class="words-list">
+            <h3>Слова для поиска:</h3>
+            <div class="words-grid" id="wordsList"></div>
+        </div>
+        
+        <div class="controls">
+            <button id="hintButton">Подсказка</button>
+            <button id="newGameButton">Новая игра</button>
+        </div>
+    </div>
+    
+    <div class="message" id="message">Слово найдено!</div>
+    
+    <script>
+        // Инициализация VK Mini App
+        vkBridge.send('VKWebAppInit');
+        
+        // Получаем информацию о пользователе
+        vkBridge.send('VKWebAppGetUserInfo')
+            .then(user => {
+                document.getElementById('userName').textContent = user.first_name;
+                document.getElementById('userAvatar').src = user.photo_100;
+            })
+            .catch(error => {
+                console.log('Ошибка получения данных пользователя:', error);
+            });
+        
+        // Конфигурация игры
+        const config = {
+            gridSize: 8,
+            words: ['ПРИВЕТ', 'КОТ', 'СОБАКА', 'ДОМ', 'СОЛНЦЕ', 'ВК', 'ДРУЗЬЯ', 'ИГРА', 'СЛОВО', 'ПОИСК'],
+            hints: 3
+        };
+        
+        let gameState = {
+            grid: [],
+            selectedCells: [],
+            foundWords: [],
+            currentHint: null,
+            hintsRemaining: config.hints
+        };
+        
+        // Инициализация игры
+        function initGame() {
+            generateGrid();
+            renderWordsList();
+            updateStats();
+            document.getElementById('hintsCount').textContent = gameState.hintsRemaining;
+        }
+        
+        // Генерация сетки филворда
+        function generateGrid() {
+            // Создаем пустую сетку
+            gameState.grid = Array(config.gridSize).fill().map(() => Array(config.gridSize).fill(''));
+            
+            // Размещаем слова в сетке
+            placeWordsInGrid();
+            
+            // Заполняем оставшиеся ячейки случайными буквами
+            fillEmptyCells();
+            
+            // Отрисовываем сетку
+            renderGrid();
+        }
+        
+        // Размещение слов в сетке
+        function placeWordsInGrid() {
+            const directions = [
+                {dx: 1, dy: 0},  // горизонтально →
+                {dx: 0, dy: 1},  // вертикально ↓
+                {dx: 1, dy: 1},  // диагонально ↘
+                {dx: 1, dy: -1}  // диагонально ↗
+            ];
+            
+            config.words.forEach(word => {
+                let placed = false;
+                let attempts = 0;
+                
+                while (!placed && attempts < 100) {
+                    attempts++;
+                    
+                    // Выбираем случайное направление
+                    const direction = directions[Math.floor(Math.random() * directions.length)];
+                    
+                    // Выбираем случайную начальную позицию
+                    let x = Math.floor(Math.random() * config.gridSize);
+                    let y = Math.floor(Math.random() * config.gridSize);
+                    
+                    // Проверяем, помещается ли слово в выбранном направлении
+                    const endX = x + (word.length - 1) * direction.dx;
+                    const endY = y + (word.length - 1) * direction.dy;
+                    
+                    if (endX >= config.gridSize || endY >= config.gridSize || endY < 0) {
+                        continue;
+                    }
+                    
+                    // Проверяем, не пересекается ли слово с уже размещенными
+                    let canPlace = true;
+                    for (let i = 0; i < word.length; i++) {
+                        const cellX = x + i * direction.dx;
+                        const cellY = y + i * direction.dy;
+                        const currentChar = gameState.grid[cellY][cellX];
+                        
+                        if (currentChar !== '' && currentChar !== word[i]) {
+                            canPlace = false;
+                            break;
+                        }
+                    }
+                    
+                    // Если можно разместить, размещаем слово
+                    if (canPlace) {
+                        for (let i = 0; i < word.length; i++) {
+                            const cellX = x + i * direction.dx;
+                            const cellY = y + i * direction.dy;
+                            gameState.grid[cellY][cellX] = word[i];
+                        }
+                        placed = true;
+                    }
+                }
+            });
+        }
+        
+        // Заполнение пустых ячеек случайными буквами
+        function fillEmptyCells() {
+            const letters = 'АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ';
+            
+            for (let y = 0; y < config.gridSize; y++) {
+                for (let x = 0; x < config.gridSize; x++) {
+                    if (gameState.grid[y][x] === '') {
+                        gameState.grid[y][x] = letters[Math.floor(Math.random() * letters.length)];
+                    }
+                }
+            }
+        }
+        
+        // Отрисовка сетки
+        function renderGrid() {
+            const gridContainer = document.getElementById('gridContainer');
+            gridContainer.innerHTML = '';
+            
+            for (let y = 0; y < config.gridSize; y++) {
+                for (let x = 0; x < config.gridSize; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.textContent = gameState.grid[y][x];
+                    cell.dataset.x = x;
+                    cell.dataset.y = y;
+                    
+                    cell.addEventListener('click', () => handleCellClick(x, y));
+                    
+                    gridContainer.appendChild(cell);
+                }
+            }
+        }
+        
+        // Обработка клика по ячейке
+        function handleCellClick(x, y) {
+            const index = gameState.selectedCells.findIndex(cell => cell.x === x && cell.y === y);
+            
+            if (index !== -1) {
+                // Если ячейка уже выбрана, удаляем её и все последующие
+                gameState.selectedCells = gameState.selectedCells.slice(0, index);
+            } else {
+                // Добавляем ячейку к выбранным
+                gameState.selectedCells.push({x, y});
+            }
+            
+            // Обновляем отображение выбранных ячеек
+            updateSelectedCells();
+            
+            // Проверяем, является ли выбранная последовательность словом
+            checkSelectedWord();
+        }
+        
+        // Обновление отображения выбранных ячеек
+        function updateSelectedCells() {
+            const allCells = document.querySelectorAll('.cell');
+            allCells.forEach(cell => {
+                cell.classList.remove('selected');
+            });
+            
+            gameState.selectedCells.forEach(cell => {
+                const cellElement = document.querySelector(`.cell[data-x="${cell.x}"][data-y="${cell.y}"]`);
+                if (cellElement) {
+                    cellElement.classList.add('selected');
+                }
+            });
+        }
+        
+        // Проверка выбранного слова
+        function checkSelectedWord() {
+            if (gameState.selectedCells.length < 3) return;
+            
+            // Получаем слово из выбранных ячеек
+            const word = gameState.selectedCells.map(cell => {
+                return gameState.grid[cell.y][cell.x];
+            }).join('');
+            
+            // Проверяем, есть ли такое слово в списке
+            const foundWord = config.words.find(w => w === word);
+            
+            if (foundWord && !gameState.foundWords.includes(foundWord)) {
+                // Найдено новое слово!
+                gameState.foundWords.push(foundWord);
+                
+                // Помечаем ячейки как найденные
+                gameState.selectedCells.forEach(cell => {
+                    const cellElement = document.querySelector(`.cell[data-x="${cell.x}"][data-y="${cell.y}"]`);
+                    if (cellElement) {
+                        cellElement.classList.add('found');
+                    }
+                });
+                
+                // Сбрасываем выделение
+                gameState.selectedCells = [];
+                
+                // Обновляем статистику
+                updateStats();
+                
+                // Показываем сообщение
+                showMessage(`Слово "${foundWord}" найдено!`);
+                
+                // Проверяем, завершена ли игра
+                checkGameCompletion();
+            }
+        }
+        
+        // Обновление статистики
+        function updateStats() {
+            document.getElementById('foundCount').textContent = gameState.foundWords.length;
+            document.getElementById('totalWords').textContent = config.words.length;
+            
+            // Обновляем список слов
+            const wordElements = document.querySelectorAll('.word-item');
+            wordElements.forEach(el => {
+                const word = el.textContent;
+                if (gameState.foundWords.includes(word)) {
+                    el.classList.add('found');
+                } else {
+                    el.classList.remove('found');
+                }
+            });
+        }
+        
+        // Проверка завершения игры
+        function checkGameCompletion() {
+            if (gameState.foundWords.length === config.words.length) {
+                setTimeout(() => {
+                    showMessage('Поздравляем! Вы нашли все слова!');
+                    vkBridge.send('VKWebAppShowOrderBox', {
+                        type: 'item',
+                        item: 'game_completion'
+                    });
+                }, 1000);
+            }
+        }
+        
+        // Показ сообщения
+        function showMessage(text) {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.classList.add('show');
+            
+            setTimeout(() => {
+                messageEl.classList.remove('show');
+            }, 2000);
+        }
+        
+        // Отрисовка списка слов
+        function renderWordsList() {
+            const wordsList = document.getElementById('wordsList');
+            wordsList.innerHTML = '';
+            
+            config.words.forEach(word => {
+                const wordEl = document.createElement('div');
+                wordEl.className = 'word-item';
+                wordEl.textContent = word;
+                wordsList.appendChild(wordEl);
+            });
+        }
+        
+        // Подсказка
+        function useHint() {
+            if (gameState.hintsRemaining <= 0) {
+                showMessage('У вас не осталось подсказок!');
+                return;
+            }
+            
+            // Находим случайное ненайденное слово
+            const notFoundWords = config.words.filter(word => !gameState.foundWords.includes(word));
+            
+            if (notFoundWords.length === 0) {
+                showMessage('Все слова уже найдены!');
+                return;
+            }
+            
+            const randomWord = notFoundWords[Math.floor(Math.random() * notFoundWords.length)];
+            
+            // Находим первую букву слова в сетке
+            for (let y = 0; y < config.gridSize; y++) {
+                for (let x = 0; x < config.gridSize; x++) {
+                    if (gameState.grid[y][x] === randomWord[0]) {
+                        // Подсвечиваем ячейку
+                        const cellElement = document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+                        if (cellElement) {
+                            cellElement.style.backgroundColor = '#ff5252';
+                            cellElement.style.color = 'white';
+                            
+                            setTimeout(() => {
+                                cellElement.style.backgroundColor = '';
+                                cellElement.style.color = '';
+                            }, 2000);
+                        }
+                        
+                        gameState.hintsRemaining--;
+                        document.getElementById('hintsCount').textContent = gameState.hintsRemaining;
+                        showMessage(`Подсказка: ищите слово "${randomWord}"`);
+                        return;
+                    }
+                }
+            }
+        }
+        
+        // Новая игра
+        function startNewGame() {
+            gameState = {
+                grid: [],
+                selectedCells: [],
+                foundWords: [],
+                currentHint: null,
+                hintsRemaining: config.hints
+            };
+            
+            initGame();
+            showMessage('Новая игра началась!');
+        }
+        
+        // Обработчики событий
+        document.getElementById('hintButton').addEventListener('click', useHint);
+        document.getElementById('newGameButton').addEventListener('click', startNewGame);
+        
+        // Запуск игры при загрузке
+        document.addEventListener('DOMContentLoaded', initGame);
+    </script>
+</body>
+</html>
